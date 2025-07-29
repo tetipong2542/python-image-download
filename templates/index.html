@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Image Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        .log-container {
+            height: 300px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .progress {
+            margin-bottom: 10px;
+        }
+        .status-card {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Website Image Downloader</h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>ตั้งค่าการดาวน์โหลด</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="downloadForm">
+                            <div class="mb-3">
+                                <label for="urls" class="form-label">URL ของเว็บไซต์ WordPress หรือ URL ของรูปภาพโดยตรง (แต่ละ URL ต่อบรรทัด)</label>
+                                <textarea class="form-control" id="urls" name="urls" rows="6" placeholder="https://example.com/post1&#10;https://example.com/wp-content/uploads/2024/07/image.png"></textarea>
+                                <small class="form-text text-muted">คุณสามารถใส่ URL ของเว็บไซต์ WordPress หรือ URL ของรูปภาพโดยตรงได้ (เช่น URL ที่ลงท้ายด้วย .jpg, .png, .gif)</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="output_dir" class="form-label">โฟลเดอร์สำหรับบันทึกรูปภาพ</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="output_dir" name="output_dir" value="downloaded_images">
+                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="selectDirBtn" data-bs-toggle="dropdown" aria-expanded="false">เลือกโฟลเดอร์</button>
+                                    <ul class="dropdown-menu" id="directoriesList" aria-labelledby="selectDirBtn">
+                                        <!-- จะถูกเติมด้วย JavaScript -->
+                                    </ul>
+                                </div>
+                                <small class="form-text text-muted">คลิกปุ่ม 'เลือกโฟลเดอร์' เพื่อเลือกโฟลเดอร์ที่ต้องการบันทึกรูปภาพ</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="prefix" class="form-label">Prefix สำหรับชื่อไฟล์รูปภาพ</label>
+                                <input type="text" class="form-control" id="prefix" name="prefix" placeholder="เช่น product-">
+                                <small class="form-text text-muted">ถ้าระบุ prefix เช่น "product-" ชื่อไฟล์จะเป็น "product-image.jpg"</small>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="use_numbering" name="use_numbering">
+                                    <label class="form-check-label" for="use_numbering">ใช้การรันตัวเลขกับ Prefix</label>
+                                </div>
+                                <small class="form-text text-muted">เช่น product-001_image.jpg, product-002_image.jpg, ...</small>
+                                <div class="row mt-2" id="numberingOptions" style="display: none;">
+                                    <div class="col-md-6">
+                                        <label for="start_number" class="form-label">เริ่มต้นที่</label>
+                                        <input type="number" class="form-control" id="start_number" name="start_number" value="1" min="0">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="digits" class="form-label">จำนวนหลัก</label>
+                                        <input type="number" class="form-control" id="digits" name="digits" value="3" min="1" max="10">
+                                        <small class="form-text text-muted">เช่น 3 หลักจะเป็น 001, 002, ...</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="downloadBtn">เริ่มดาวน์โหลด</button>
+                            <a href="/browse" class="btn btn-secondary" id="browseBtn">ดูรูปภาพที่ดาวน์โหลด</a>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card status-card">
+                    <div class="card-header">
+                        <h5>สถานะการดาวน์โหลด</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="statusContainer" style="display: none;">
+                            <p><strong>กำลังประมวลผล URL:</strong> <span id="currentUrl">-</span></p>
+                            <p><strong>ความคืบหน้า URL:</strong> <span id="urlProgress">0/0</span></p>
+                            <div class="progress">
+                                <div id="urlProgressBar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                            </div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <div class="card text-center">
+                                        <div class="card-body">
+                                            <h5 class="card-title" id="downloadedCount">0</h5>
+                                            <p class="card-text">ดาวน์โหลดสำเร็จ</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card text-center">
+                                        <div class="card-body">
+                                            <h5 class="card-title" id="skippedCount">0</h5>
+                                            <p class="card-text">ข้าม</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card text-center">
+                                        <div class="card-body">
+                                            <h5 class="card-title" id="failedCount">0</h5>
+                                            <p class="card-text">ล้มเหลว</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- เพิ่มปุ่มดาวน์โหลด ZIP -->
+                            <div class="mt-3 text-center" id="downloadZipContainer" style="display: none;">
+                                <a href="#" id="downloadZipBtn" class="btn btn-success">
+                                    <i class="bi bi-download"></i> ดาวน์โหลดรูปภาพทั้งหมด (ZIP)
+                                </a>
+                            </div>
+                        </div>
+                        <div id="notRunningMessage">
+                            <p class="text-center">ยังไม่มีการดาวน์โหลดที่กำลังทำงาน</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>บันทึกการทำงาน</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="log-container" id="logContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const downloadForm = document.getElementById('downloadForm');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const statusContainer = document.getElementById('statusContainer');
+            const notRunningMessage = document.getElementById('notRunningMessage');
+            const logContainer = document.getElementById('logContainer');
+            const currentUrl = document.getElementById('currentUrl');
+            const urlProgress = document.getElementById('urlProgress');
+            const urlProgressBar = document.getElementById('urlProgressBar');
+            const downloadedCount = document.getElementById('downloadedCount');
+            const skippedCount = document.getElementById('skippedCount');
+            const failedCount = document.getElementById('failedCount');
+            
+            let statusInterval;
+            
+            // ฟังก์ชันสำหรับอัปเดตสถานะ
+            function updateStatus() {
+                fetch('/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.is_running) {
+                            statusContainer.style.display = 'block';
+                            notRunningMessage.style.display = 'none';
+                            downloadBtn.disabled = true;
+                            downloadZipContainer.style.display = 'none';
+                            
+                            // อัปเดตข้อมูลสถานะ
+                            currentUrl.textContent = data.current_url || '-';
+                            urlProgress.textContent = `${data.current_url_index}/${data.total_urls}`;
+                            
+                            const progressPercent = data.total_urls > 0 ? Math.round((data.current_url_index / data.total_urls) * 100) : 0;
+                            urlProgressBar.style.width = `${progressPercent}%`;
+                            urlProgressBar.textContent = `${progressPercent}%`;
+                            urlProgressBar.setAttribute('aria-valuenow', progressPercent);
+                            
+                            downloadedCount.textContent = data.downloaded;
+                            skippedCount.textContent = data.skipped;
+                            failedCount.textContent = data.failed;
+                            
+                            // อัปเดต log
+                            logContainer.innerHTML = '';
+                            data.logs.forEach(log => {
+                                const logLine = document.createElement('div');
+                                logLine.textContent = log;
+                                logContainer.appendChild(logLine);
+                            });
+                            
+                            // เพิ่มลิงก์ไปยังหน้า Browse เมื่อมีรูปภาพที่ล้มเหลว
+                            if (data.failed > 0 && data.is_running === false) {
+                                const failedLink = document.createElement('div');
+                                failedLink.innerHTML = '<div class="alert alert-warning mt-2">มีรูปภาพที่ล้มเหลวในการดาวน์โหลด <a href="/browse" class="alert-link">คลิกที่นี่</a> เพื่อดูและลองดาวน์โหลดใหม่</div>';
+                                logContainer.appendChild(failedLink);
+                            }
+                            
+                            // เลื่อน log ไปล่างสุด
+                            logContainer.scrollTop = logContainer.scrollHeight;
+                        } else {
+                            if (statusInterval) {
+                                // ถ้าการดาวน์โหลดเสร็จสิ้น ให้หยุดการอัปเดตสถานะ
+                                if (downloadBtn.disabled) {
+                                    downloadBtn.disabled = false;
+                                    statusContainer.style.display = 'block';
+                                    notRunningMessage.style.display = 'none';
+                                    
+                                    // แสดงปุ่มดาวน์โหลด ZIP
+                                    if (currentSessionId) {
+                                        downloadZipContainer.style.display = 'block';
+                                        downloadZipBtn.href = `/download_zip/${currentSessionId}`;
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching status:', error);
+                    });
+            }
+            
+            // เริ่มการอัปเดตสถานะทุก 1 วินาที
+            statusInterval = setInterval(updateStatus, 1000);
+            
+            // ส่งฟอร์มเพื่อเริ่มการดาวน์โหลด
+            downloadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(downloadForm);
+                
+                fetch('/download', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // เคลียร์ log เก่า
+                        logContainer.innerHTML = '';
+                        
+                        // เก็บ session ID
+                        currentSessionId = data.session_id;
+                        
+                        // เริ่มการอัปเดตสถานะ
+                        updateStatus();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error starting download:', error);
+                    alert('เกิดข้อผิดพลาดในการเริ่มการดาวน์โหลด');
+                });
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ... existing code ...
+            
+            // แสดง/ซ่อนตัวเลือกการรันตัวเลข
+            const useNumberingCheckbox = document.getElementById('use_numbering');
+            const numberingOptions = document.getElementById('numberingOptions');
+            
+            useNumberingCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    numberingOptions.style.display = 'flex';
+                } else {
+                    numberingOptions.style.display = 'none';
+                }
+            });
+
+            // เพิ่มการจัดการปุ่มเลือกโฟลเดอร์
+            const selectDirBtn = document.getElementById('selectDirBtn');
+            const outputDirInput = document.getElementById('output_dir');
+            const directoriesList = document.getElementById('directoriesList');
+
+            // ดึงรายการไดเรกทอรี์
+            function fetchDirectories() {
+                fetch('/select_directory')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // ล้างรายการเก่า
+                            directoriesList.innerHTML = '';
+                            
+                            // เพิ่มรายการไดเรกทอรี
+                            data.directories.forEach(dir => {
+                                const listItem = document.createElement('li');
+                                const link = document.createElement('a');
+                                link.href = '#';
+                                link.classList.add('dropdown-item');
+                                link.textContent = dir;
+                                link.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    outputDirInput.value = dir;
+                                });
+                                listItem.appendChild(link);
+                                directoriesList.appendChild(listItem);
+                            });
+
+                            // เพิ่มตัวเลือกเลือกโฟลเดอร์อื่น
+                            const customDirItem = document.createElement('li');
+                            const customDirLink = document.createElement('a');
+                            customDirLink.href = '#';
+                            customDirLink.classList.add('dropdown-item');
+                            customDirLink.textContent = 'เลือกโฟลเดอร์อื่น...';
+                            customDirLink.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                const customDir = prompt('กรุณาป้อนเส้นทางโฟลเดอร์เต็ม:', '');
+                                if (customDir && customDir.trim() !== '') {
+                                    outputDirInput.value = customDir.trim();
+                                }
+                            });
+                            customDirItem.appendChild(customDirLink);
+                            directoriesList.appendChild(document.createElement('li').appendChild(document.createElement('hr')).parentElement);
+                            directoriesList.appendChild(customDirItem);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('เกิดข้อผิดพลาดในการดึงรายการไดเรกทอรี:', error);
+                        alert('เกิดข้อผิดพลาดในการดึงรายการไดเรกทอรี');
+                    });
+            }
+
+            // เรียกฟังก์ชันดึงรายการไดเรกทอรีเมื่อคลิกปุ่ม
+            selectDirBtn.addEventListener('click', fetchDirectories);
+        });
+    </script>
+
+    <!-- เพิ่ม Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</body>
+</html>

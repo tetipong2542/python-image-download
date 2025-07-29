@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รูปภาพที่ดาวน์โหลด - Website Image Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        .image-card {
+            margin-bottom: 20px;
+            height: 250px;
+            overflow: hidden;
+        }
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .image-card img:hover {
+            transform: scale(1.05);
+        }
+        .image-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 5px;
+            text-align: center;
+        }
+        .failed-url {
+            word-break: break-all;
+            margin-bottom: 5px;
+        }
+        .status-message {
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">รูปภาพที่ดาวน์โหลด</h1>
+        <div class="mb-3">
+            <a href="/" class="btn btn-primary">กลับไปหน้าหลัก</a>
+        </div>
+        
+        <!-- ส่วนแสดงรูปภาพที่ล้มเหลว -->
+        {% if failed_images %}
+        <div class="card mb-4">
+            <div class="card-header bg-danger text-white">
+                <h5>รูปภาพที่ล้มเหลวในการดาวน์โหลด ({{ failed_images|length }} รูป)</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <button id="retryBtn" class="btn btn-warning btn-lg">ลองดาวน์โหลดใหม่ทั้งหมด</button>
+                    <div id="statusMessage" class="alert alert-info status-message mt-2"></div>
+                </div>
+                <div class="list-group">
+                    <h6 class="mb-2">รายการ URL ที่ล้มเหลว:</h6>
+                    {% for url in failed_images %}
+                    <div class="list-group-item failed-url">{{ url }}</div>
+                    {% endfor %}
+                </div>
+                <!-- ปุ่มลองดาวน์โหลดรูปภาพที่ล้มเหลวซ้ำ -->
+                <button id="retry-failed-btn" class="btn btn-warning" style="display: none;" onclick="retryFailedImages()">
+                    <i class="fas fa-redo"></i> ลองดาวน์โหลดรูปภาพที่ล้มเหลวซ้ำ
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- ส่วนแสดงรูปภาพที่ดาวน์โหลดสำเร็จ -->
+        {% if not images %}
+        <div class="alert alert-info">
+            ยังไม่มีรูปภาพที่ดาวน์โหลด หรือยังไม่ได้เริ่มการดาวน์โหลด
+        </div>
+        {% else %}
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5>รูปภาพที่ดาวน์โหลดสำเร็จ ({{ images|length }} รูป)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for image in images %}
+                    <div class="col-md-3">
+                        <div class="card image-card">
+                            <a href="/images/{{ image }}" target="_blank">
+                                <img src="/images/{{ image }}" class="card-img-top" alt="{{ image }}">
+                            </a>
+                            <div class="image-name">
+                                {{ image }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const retryBtn = document.getElementById('retryBtn');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            if (retryBtn) {
+                retryBtn.addEventListener('click', function() {
+                    // ปิดปุ่มระหว่างกำลังดาวน์โหลด
+                    retryBtn.disabled = true;
+                    statusMessage.style.display = 'block';
+                    statusMessage.textContent = 'กำลังลองดาวน์โหลดรูปภาพที่ล้มเหลวซ้ำ...';
+                    
+                    // ส่งคำขอไปยัง API
+                    fetch('/retry-failed', {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // เริ่มตรวจสอบสถานะ
+                            checkStatus();
+                        } else {
+                            statusMessage.textContent = data.message;
+                            retryBtn.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error retrying downloads:', error);
+                        statusMessage.textContent = 'เกิดข้อผิดพลาดในการลองดาวน์โหลดซ้ำ';
+                        retryBtn.disabled = false;
+                    });
+                });
+            }
+            
+            // ฟังก์ชันสำหรับตรวจสอบสถานะการดาวน์โหลด
+            function checkStatus() {
+                fetch('/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.is_running) {
+                            // อัปเดตข้อความสถานะ
+                            statusMessage.textContent = `กำลังดาวน์โหลด... (${data.current_url_index}/${data.total_urls})`;
+                            
+                            // ตรวจสอบอีกครั้งหลังจาก 1 วินาที
+                            setTimeout(checkStatus, 1000);
+                        } else {
+                            // ดาวน์โหลดเสร็จสิ้น
+                            statusMessage.textContent = 'การดาวน์โหลดเสร็จสิ้น กำลังรีเฟรชหน้า...';
+                            
+                            // รีเฟรชหน้าเพื่อแสดงผลล่าสุด
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking status:', error);
+                        statusMessage.textContent = 'เกิดข้อผิดพลาดในการตรวจสอบสถานะ';
+                        retryBtn.disabled = false;
+                    });
+            }
+
+            // อัปเดตการแสดงปุ่มลองดาวน์โหลดซ้ำ
+            function updateRetryFailedButton() {
+                const retryBtn = document.getElementById('retry-failed-btn');
+                const failedCount = parseInt(document.getElementById('failed-count').textContent);
+                
+                if (failedCount > 0) {
+                    retryBtn.style.display = 'inline-block';
+                } else {
+                    retryBtn.style.display = 'none';
+                }
+            }
+
+            // เรียกฟังก์ชันนี้หลังจากอัปเดตสถานะการดาวน์โหลด
+            function updateDownloadStatus() {
+                fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-count').textContent = data.total;
+                    document.getElementById('downloaded-count').textContent = data.downloaded;
+                    document.getElementById('failed-count').textContent = data.failed;
+                    document.getElementById('skipped-count').textContent = data.skipped;
+                    
+                    updateRetryFailedButton();
+                });
+            }
+        });
+    </script>
+</body>
+</html>
