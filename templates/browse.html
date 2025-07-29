@@ -155,12 +155,10 @@
             // ดาวน์โหลด ZIP
             downloadZipBtn.addEventListener('click', function() {
                 // ตรวจสอบว่ามี session_id หรือไม่
-                const sessionId = "{{ session_id }}";
-                if (!sessionId) {
                     alert('ไม่พบข้อมูลเซสชันการดาวน์โหลด');
                     return;
                 }
-                window.location.href = `/download_zip/${sessionId}`;
+                window.location.href = "/download_zip/current";
             });
 
             // ลบรูปภาพที่เลือก
