@@ -321,33 +321,33 @@ def select_directory():
     })
 
 @app.route('/download_zip/<session_id>', methods=['GET'])
+@app.route("/download_zip/<session_id>", methods=["GET"])
 def download_zip(session_id):
-    # ถ้า session_id เป็น 'current' ให้ใช้ output_dir ปัจจุบัน
-    if session_id == 'current':
-        session_path = download_status.get('output_dir', '')
+    # ถ้า session_id เป็น "current" ให้ใช้ output_dir ปัจจุบัน
+    if session_id == "current":
+        session_path = download_status.get("output_dir", "")
     else:
         # ตรวจสอบความปลอดภัยของ session ID
         session_path = os.path.join(SESSION_DOWNLOAD_DIR, session_id)
     
     if not session_path or not os.path.exists(session_path):
-        return jsonify({'status': 'error', 'message': 'เซสชันการดาวน์โหลดไม่ถูกต้อง'})
+        return jsonify({"status": "error", "message": "เซสชันการดาวน์โหลดไม่ถูกต้อง"})
     
     # ตรวจสอบว่ามีไฟล์รูปภาพในโฟลเดอร์หรือไม่
-    image_files = [f for f in os.listdir(session_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp'))]
+    image_files = [f for f in os.listdir(session_path) if f.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".webp"))]
     
     if not image_files:
-        return jsonify({'status': 'error', 'message': 'ไม่มีรูปภาพในโฟลเดอร์'})
+        return jsonify({"status": "error", "message": "ไม่มีรูปภาพในโฟลเดอร์"})
     
     # สร้างไฟล์ ZIP
-    zip_filename = f'downloaded_images_{session_id}.zip'
+    zip_filename = f"downloaded_images_{session_id}.zip"
     zip_path = os.path.join(BASE_DOWNLOAD_DIR, zip_filename)
     
     # บีบอัดโฟลเดอร์เป็น ZIP
-    shutil.make_archive(zip_path[:-4], 'zip', session_path)
+    shutil.make_archive(zip_path[:-4], "zip", session_path)
     
     # ส่งไฟล์ ZIP ให้ดาวน์โหลด
     return send_file(zip_path, as_attachment=True, download_name=zip_filename)
-
 @app.route('/delete_images', methods=['POST'])
 def delete_images():
     try:
