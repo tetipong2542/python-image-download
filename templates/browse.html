@@ -6,6 +6,8 @@
     <title>รูปภาพที่ดาวน์โหลด</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun&display=swap" rel="stylesheet">
+
     <style>
         :root {
             --primary-color: #3498db;
@@ -14,11 +16,12 @@
         }
 
         body {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background:  url('/static/bg.webp');
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            font-family: 'Arial', sans-serif;
+            font-family: 'sarabun', sans-serif!important;
+
         }
 
         .glassmorphism {
@@ -155,10 +158,12 @@
             // ดาวน์โหลด ZIP
             downloadZipBtn.addEventListener('click', function() {
                 // ตรวจสอบว่ามี session_id หรือไม่
+                const sessionId = "{{ session_id }}";
+                if (!sessionId) {
                     alert('ไม่พบข้อมูลเซสชันการดาวน์โหลด');
                     return;
                 }
-                window.location.href = "/download_zip/current";
+                window.location.href = `/download_zip/${sessionId}`;
             });
 
             // ลบรูปภาพที่เลือก
