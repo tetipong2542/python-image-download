@@ -3,6 +3,7 @@ import threading
 import time
 import uuid
 import shutil
+import zipfile
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory, send_file
 from imgdownloader import WordPressImageDownloader
 from urllib.parse import urlparse
@@ -336,6 +337,54 @@ def download_zip(session_id):
     
     # ส่งไฟล์ ZIP ให้ดาวน์โหลด
     return send_file(zip_path, as_attachment=True, download_name=zip_filename)
+
+@app.route('/delete_images', methods=['POST'])
+def delete_images():
+    try:
+        # รับข้อมูลจาก request
+        images_to_delete = request.form.getlist('images')
+        output_dir = download_status.get('output_dir', '')
+        
+        if not output_dir or not os.path.exists(output_dir):
+            return jsonify({'status': 'error', 'message': 'ไม่พบโฟลเดอร์ดาวน์โหลด'})
+        
+        # ลบรูปภาพที่เลือก
+        deleted_count = 0
+        for image in images_to_delete:
+            image_path = os.path.join(output_dir, image)
+            if os.path.exists(image_path):
+                os.remove(image_path)
+                deleted_count += 1
+        
+        return jsonify({
+            'status': 'success', 
+            'message': f'ลบรูปภาพสำเร็จ {deleted_count} รูป'
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/delete_all_images', methods=['POST'])
+def delete_all_images():
+    try:
+        output_dir = download_status.get('output_dir', '')
+        
+        if not output_dir or not os.path.exists(output_dir):
+            return jsonify({'status': 'error', 'message': 'ไม่พบโฟลเดอร์ดาวน์โหลด'})
+        
+        # ลบไฟล์ทั้งหมดในโฟลเดอร์
+        deleted_count = 0
+        for filename in os.listdir(output_dir):
+            file_path = os.path.join(output_dir, filename)
+            if os.path.isfile(file_path) and filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                os.remove(file_path)
+                deleted_count += 1
+        
+        return jsonify({
+            'status': 'success', 
+            'message': f'ลบรูปภาพทั้งหมดสำเร็จ {deleted_count} รูป'
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))

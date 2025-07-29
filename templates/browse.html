@@ -3,100 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รูปภาพที่ดาวน์โหลด - Website Image Downloader</title>
+    <title>รูปภาพที่ดาวน์โหลด</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --background-color: #f0f4f8;
+        }
+
         body {
-            padding-top: 20px;
-            padding-bottom: 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Arial', sans-serif;
         }
+
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.125);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .image-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+        }
+
         .image-card {
-            margin-bottom: 20px;
-            height: 250px;
+            position: relative;
+            border-radius: 10px;
             overflow: hidden;
+            transition: transform 0.3s ease;
         }
-        .image-card img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            transition: transform 0.3s;
-        }
-        .image-card img:hover {
+
+        .image-card:hover {
             transform: scale(1.05);
         }
-        .image-name {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 5px;
-            text-align: center;
+
+        .image-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
         }
-        .failed-url {
-            word-break: break-all;
-            margin-bottom: 5px;
+
+        .image-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
         }
-        .status-message {
-            display: none;
-            margin-top: 10px;
+
+        .btn-delete {
+            background-color: rgba(255, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .failed-images {
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="mb-4">รูปภาพที่ดาวน์โหลด</h1>
-        <div class="mb-3">
-            <a href="/" class="btn btn-primary">กลับไปหน้าหลัก</a>
-        </div>
-        
-        <!-- ส่วนแสดงรูปภาพที่ล้มเหลว -->
-        {% if failed_images %}
-        <div class="card mb-4">
-            <div class="card-header bg-danger text-white">
-                <h5>รูปภาพที่ล้มเหลวในการดาวน์โหลด ({{ failed_images|length }} รูป)</h5>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12 text-center my-4">
+                <h1 class="text-white">รูปภาพที่ดาวน์โหลด</h1>
             </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <button id="retryBtn" class="btn btn-warning btn-lg">ลองดาวน์โหลดใหม่ทั้งหมด</button>
-                    <div id="statusMessage" class="alert alert-info status-message mt-2"></div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-12 text-center">
+                <div class="btn-group" role="group">
+                    <a href="/" class="btn btn-secondary me-2">
+                        <i class="bi bi-arrow-left"></i> ย้อนกลับหน้าหลัก
+                    </a>
+                    <button id="downloadZipBtn" class="btn btn-success me-2">
+                        <i class="bi bi-download"></i> ดาวน์โหลดทั้งหมด (ZIP)
+                    </button>
+                    <button id="deleteSelectedBtn" class="btn btn-danger me-2">
+                        <i class="bi bi-trash"></i> ลบรูปที่เลือก
+                    </button>
+                    <button id="deleteAllBtn" class="btn btn-warning">
+                        <i class="bi bi-trash-fill"></i> ลบทั้งหมด
+                    </button>
                 </div>
-                <div class="list-group">
-                    <h6 class="mb-2">รายการ URL ที่ล้มเหลว:</h6>
-                    {% for url in failed_images %}
-                    <div class="list-group-item failed-url">{{ url }}</div>
-                    {% endfor %}
-                </div>
-                <!-- ปุ่มลองดาวน์โหลดรูปภาพที่ล้มเหลวซ้ำ -->
-                <button id="retry-failed-btn" class="btn btn-warning" style="display: none;" onclick="retryFailedImages()">
-                    <i class="fas fa-redo"></i> ลองดาวน์โหลดรูปภาพที่ล้มเหลวซ้ำ
-                </button>
             </div>
         </div>
-        {% endif %}
-        
-        <!-- ส่วนแสดงรูปภาพที่ดาวน์โหลดสำเร็จ -->
-        {% if not images %}
-        <div class="alert alert-info">
-            ยังไม่มีรูปภาพที่ดาวน์โหลด หรือยังไม่ได้เริ่มการดาวน์โหลด
-        </div>
-        {% else %}
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white">
-                <h5>รูปภาพที่ดาวน์โหลดสำเร็จ ({{ images|length }} รูป)</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    {% for image in images %}
-                    <div class="col-md-3">
-                        <div class="card image-card">
-                            <a href="/images/{{ image }}" target="_blank">
-                                <img src="/images/{{ image }}" class="card-img-top" alt="{{ image }}">
-                            </a>
-                            <div class="image-name">
-                                {{ image }}
+
+        <div class="row">
+            <div class="col-12">
+                <div class="glassmorphism">
+                    <div class="image-container" id="imageContainer">
+                        {% if images %}
+                            {% for image in images %}
+                            <div class="image-card position-relative">
+                                <img src="{{ url_for('download_file', filename=image) }}" alt="{{ image }}">
+                                <div class="image-overlay">
+                                    <input type="checkbox" class="form-check-input image-checkbox" 
+                                           data-filename="{{ image }}">
+                                </div>
                             </div>
-                        </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center w-100 text-white py-5">
+                                <h3>ไม่มีรูปภาพในโฟลเดอร์</h3>
+                            </div>
+                        {% endif %}
                     </div>
-                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if failed_images %}
+        <div class="row failed-images">
+            <div class="col-12">
+                <div class="card glassmorphism text-white">
+                    <div class="card-header bg-danger">
+                        <h5>รูปภาพที่ดาวน์โหลดล้มเหลว</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            {% for failed_image in failed_images %}
+                            <li class="list-group-item bg-transparent text-white">{{ failed_image }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -106,91 +147,105 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const retryBtn = document.getElementById('retryBtn');
-            const statusMessage = document.getElementById('statusMessage');
-            
-            if (retryBtn) {
-                retryBtn.addEventListener('click', function() {
-                    // ปิดปุ่มระหว่างกำลังดาวน์โหลด
-                    retryBtn.disabled = true;
-                    statusMessage.style.display = 'block';
-                    statusMessage.textContent = 'กำลังลองดาวน์โหลดรูปภาพที่ล้มเหลวซ้ำ...';
-                    
-                    // ส่งคำขอไปยัง API
-                    fetch('/retry-failed', {
-                        method: 'POST'
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            // เริ่มตรวจสอบสถานะ
-                            checkStatus();
-                        } else {
-                            statusMessage.textContent = data.message;
-                            retryBtn.disabled = false;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error retrying downloads:', error);
-                        statusMessage.textContent = 'เกิดข้อผิดพลาดในการลองดาวน์โหลดซ้ำ';
-                        retryBtn.disabled = false;
-                    });
-                });
-            }
-            
-            // ฟังก์ชันสำหรับตรวจสอบสถานะการดาวน์โหลด
-            function checkStatus() {
-                fetch('/status')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.is_running) {
-                            // อัปเดตข้อความสถานะ
-                            statusMessage.textContent = `กำลังดาวน์โหลด... (${data.current_url_index}/${data.total_urls})`;
-                            
-                            // ตรวจสอบอีกครั้งหลังจาก 1 วินาที
-                            setTimeout(checkStatus, 1000);
-                        } else {
-                            // ดาวน์โหลดเสร็จสิ้น
-                            statusMessage.textContent = 'การดาวน์โหลดเสร็จสิ้น กำลังรีเฟรชหน้า...';
-                            
-                            // รีเฟรชหน้าเพื่อแสดงผลล่าสุด
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error checking status:', error);
-                        statusMessage.textContent = 'เกิดข้อผิดพลาดในการตรวจสอบสถานะ';
-                        retryBtn.disabled = false;
-                    });
-            }
+            const downloadZipBtn = document.getElementById('downloadZipBtn');
+            const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+            const deleteAllBtn = document.getElementById('deleteAllBtn');
+            const imageContainer = document.getElementById('imageContainer');
 
-            // อัปเดตการแสดงปุ่มลองดาวน์โหลดซ้ำ
-            function updateRetryFailedButton() {
-                const retryBtn = document.getElementById('retry-failed-btn');
-                const failedCount = parseInt(document.getElementById('failed-count').textContent);
-                
-                if (failedCount > 0) {
-                    retryBtn.style.display = 'inline-block';
-                } else {
-                    retryBtn.style.display = 'none';
+            // ดาวน์โหลด ZIP
+            downloadZipBtn.addEventListener('click', function() {
+                // ตรวจสอบว่ามี session_id หรือไม่
+                const sessionId = "{{ session_id }}";
+                if (!sessionId) {
+                    alert('ไม่พบข้อมูลเซสชันการดาวน์โหลด');
+                    return;
                 }
-            }
+                window.location.href = `/download_zip/${sessionId}`;
+            });
 
-            // เรียกฟังก์ชันนี้หลังจากอัปเดตสถานะการดาวน์โหลด
-            function updateDownloadStatus() {
-                fetch('/status')
+            // ลบรูปภาพที่เลือก
+            deleteSelectedBtn.addEventListener('click', function() {
+                const selectedImages = Array.from(
+                    document.querySelectorAll('.image-checkbox:checked')
+                ).map(checkbox => checkbox.dataset.filename);
+
+                if (selectedImages.length === 0) {
+                    alert('กรุณาเลือกรูปภาพที่ต้องการลบ');
+                    return;
+                }
+
+                if (!confirm(`คุณต้องการลบรูปภาพที่เลือก ${selectedImages.length} รูปใช่หรือไม่?`)) {
+                    return;
+                }
+
+                const formData = new FormData();
+                selectedImages.forEach(image => {
+                    formData.append('images', image);
+                });
+
+                fetch('/delete_images', {
+                    method: 'POST',
+                    body: formData
+                })
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('total-count').textContent = data.total;
-                    document.getElementById('downloaded-count').textContent = data.downloaded;
-                    document.getElementById('failed-count').textContent = data.failed;
-                    document.getElementById('skipped-count').textContent = data.skipped;
-                    
-                    updateRetryFailedButton();
+                    if (data.status === 'success') {
+                        // ลบรูปภาพที่เลือกออกจาก DOM
+                        selectedImages.forEach(image => {
+                            const imageCard = document.querySelector(
+                                `.image-card img[src$="${image}"]`).closest('.image-card');
+                            imageCard.remove();
+                        });
+
+                        // ตรวจสอบว่ามีรูปภาพเหลือหรือไม่
+                        const remainingImages = document.querySelectorAll('.image-card');
+                        if (remainingImages.length === 0) {
+                            imageContainer.innerHTML = `
+                                <div class="text-center w-100 text-white py-5">
+                                    <h3>ไม่มีรูปภาพในโฟลเดอร์</h3>
+                                </div>
+                            `;
+                        }
+
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('เกิดข้อผิดพลาดในการลบรูปภาพ');
                 });
-            }
+            });
+
+            // ลบรูปภาพทั้งหมด
+            deleteAllBtn.addEventListener('click', function() {
+                if (!confirm('คุณต้องการลบรูปภาพทั้งหมดใช่หรือไม่?')) {
+                    return;
+                }
+
+                fetch('/delete_all_images', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // ล้างคอนเทนเนอร์รูปภาพ
+                        imageContainer.innerHTML = `
+                            <div class="text-center w-100 text-white py-5">
+                                <h3>ไม่มีรูปภาพในโฟลเดอร์</h3>
+                            </div>
+                        `;
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('เกิดข้อผิดพลาดในการลบรูปภาพ');
+                });
+            });
         });
     </script>
 </body>
