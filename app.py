@@ -338,4 +338,5 @@ def download_zip(session_id):
     return send_file(zip_path, as_attachment=True, download_name=zip_filename)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)  # เปลี่ยนจากพอร์ต 5000 เป็น 5001
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=False)
